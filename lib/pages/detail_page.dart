@@ -1,38 +1,69 @@
 import 'package:flutter/material.dart';
-import '../models/movie_model.dart';
+import 'package:responsi/models/movie_model.dart';
+import 'package:responsi/services/movie_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class DetailPage extends StatelessWidget {
-  final Movie movie;
+  final int id;
 
-  const DetailPage({super.key, required this.movie});
+  const DetailPage({super.key, required this.id});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Movie Detail')),
+      appBar: AppBar(title: const Text("Film Detail")),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Image.network(movie.image, height: 200),
-            SizedBox(height: 16),
-            Text('Name: ${movie.title}', style: TextStyle(fontSize: 18)),
-            Text('Director: ${movie.director}'),
-            Text('Genre: ${movie.genre}'),
-            Text('Year: ${movie.year}'),
-            Text('Rating: ${movie.rating} / 10'),
-            SizedBox(height: 16),
-            Text('Synopsis:', style: TextStyle(fontWeight: FontWeight.bold)),
-            Text(movie.synopsis),
-            SizedBox(height: 16),
+        padding: const EdgeInsets.all(20),
+        child: _filmDetail(),
+      ),
+    );
+  }
+
+  Widget _filmDetail() {
+    return FutureBuilder<FilmData>(
+      future: ApiService.getFilmById(id),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(child: Text("Error: ${snapshot.error.toString()}"));
+        } else if (snapshot.hasData) {
+          return _filmWidget(snapshot.data!);
+        } else {
+          return const Center(child: CircularProgressIndicator());
+        }
+      },
+    );
+  }
+
+  Widget _filmWidget(FilmData film) {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text("Title: ${film.title ?? 'N/A'}", style: const TextStyle(fontSize: 18)),
+          Text("Year: ${film.year ?? 'N/A'}"),
+          Text("Rating: ${film.rating?.toStringAsFixed(1) ?? 'N/A'}"),
+          Text("Genre: ${film.genre ?? 'N/A'}"),
+          Text("Director: ${film.director ?? 'N/A'}"),
+          const SizedBox(height: 12),
+          film.imgUrl != null
+              ? Image.network(film.imgUrl!)
+              : const Text("No Image Available"),
+          const SizedBox(height: 16),
+          Text("Synopsis:\n${film.synopsis ?? '-'}"),
+          const SizedBox(height: 16),
+          if (film.movieUrl != null)
             ElevatedButton(
-              onPressed: () {
-                // Ganti dengan URL film jika tersedia
+              onPressed: () async {
+                final url = Uri.parse(film.movieUrl!);
+                if (await canLaunchUrl(url)) {
+                  await launchUrl(url);
+                } else {
+                  throw 'Could not launch ${film.movieUrl}';
+                }
               },
-              child: Text('Movie Website'),
+              child: const Text("Visit Website"),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }

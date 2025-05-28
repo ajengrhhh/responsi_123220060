@@ -1,84 +1,123 @@
 import 'package:flutter/material.dart';
-import '../models/movie_model.dart';
-import '../services/movie_service.dart';
+import 'package:responsi/models/movie_model.dart';
+import 'package:responsi/services/movie_service.dart';
+import 'home_page.dart'; // Ganti sesuai dengan halaman utama kamu
 
-class EditPage extends StatefulWidget {
-  final Movie movie;
-
-  const EditPage({super.key, required this.movie});
+class EditFilmPage extends StatefulWidget {
+  final int id;
+  const EditFilmPage({super.key, required this.id});
 
   @override
-  State<EditPage> createState() => _EditPageState();
+  State<EditFilmPage> createState() => _EditFilmPageState();
 }
 
-class _EditPageState extends State<EditPage> {
-  final _formKey = GlobalKey<FormState>();
-  late TextEditingController _titleController;
-  late TextEditingController _yearController;
-  late TextEditingController _genreController;
-  late TextEditingController _directorController;
-  late TextEditingController _ratingController;
-  late TextEditingController _synopsisController;
-  late TextEditingController _imageUrlController;
+class _EditFilmPageState extends State<EditFilmPage> {
+  final title = TextEditingController();
+  final year = TextEditingController();
+  final rating = TextEditingController();
+  final imgUrl = TextEditingController();
+  final genre = TextEditingController();
+  final director = TextEditingController();
+  final synopsis = TextEditingController();
+  final movieUrl = TextEditingController();
 
-  @override
-  void initState() {
-    super.initState();
-    _titleController = TextEditingController(text: widget.movie.title);
-    _yearController = TextEditingController(text: widget.movie.year);
-    _genreController = TextEditingController(text: widget.movie.genre);
-    _directorController = TextEditingController(text: widget.movie.director);
-    _ratingController = TextEditingController(text: widget.movie.rating.toString());
-    _synopsisController = TextEditingController(text: widget.movie.synopsis);
-    _imageUrlController = TextEditingController(text: widget.movie.image);
-  }
-
-  void _submit() async {
-    if (_formKey.currentState!.validate()) {
-      final updatedMovie = Movie(
-        id: widget.movie.id,
-        title: _titleController.text,
-        year: _yearController.text,
-        genre: _genreController.text,
-        director: _directorController.text,
-        rating: double.parse(_ratingController.text),
-        synopsis: _synopsisController.text,
-        image: _imageUrlController.text,
-      );
-      final success = await ApiService.updateMovie(widget.movie.id, updatedMovie);
-      if (success) {
-        Navigator.pop(context);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to update movie')),
-        );
-      }
-    }
-  }
+  bool _isDataLoaded = false;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Update Movie')),
+      appBar: AppBar(title: const Text("Update Film"), centerTitle: true),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              TextFormField(controller: _titleController, decoration: const InputDecoration(labelText: 'Title')),
-              TextFormField(controller: _yearController, decoration: const InputDecoration(labelText: 'Year')),
-              TextFormField(controller: _genreController, decoration: const InputDecoration(labelText: 'Genre')),
-              TextFormField(controller: _directorController, decoration: const InputDecoration(labelText: 'Director')),
-              TextFormField(controller: _ratingController, decoration: const InputDecoration(labelText: 'Rating')),
-              TextFormField(controller: _synopsisController, decoration: const InputDecoration(labelText: 'Synopsis')),
-              TextFormField(controller: _imageUrlController, decoration: const InputDecoration(labelText: 'Image URL')),
-              const SizedBox(height: 20),
-              ElevatedButton(onPressed: _submit, child: const Text('Update Movie'))
-            ],
-          ),
-        ),
+        padding: const EdgeInsets.all(20),
+        child: _filmWidget(),
       ),
     );
+  }
+
+ Widget _filmWidget() {
+  return FutureBuilder<FilmData>(
+    future: ApiService.getFilmById(widget.id),
+    builder: (context, snapshot) {
+      if (snapshot.hasError) {
+        return Text("Error: ${snapshot.error.toString()}");
+      } else if (snapshot.hasData) {
+        if (!_isDataLoaded) {
+          _isDataLoaded = true;
+          FilmData film = snapshot.data!;  // langsung Film, bukan Map
+          title.text = film.title!;
+          year.text = film.year!.toString();
+          rating.text = film.rating!.toString();
+          genre.text = film.genre!;
+          director.text = film.director!;
+          synopsis.text = film.synopsis!;
+        }
+
+        return _filmEditForm(context);
+      } else {
+        return const Center(child: CircularProgressIndicator());
+      }
+    },
+  );
+}
+
+  Widget _filmEditForm(BuildContext context) {
+    return ListView(
+      children: [
+        _textField(title, "Title"),
+        _textField(year, "Year"),
+        _textField(rating, "Rating"),
+        _textField(genre, "Genre"),
+        _textField(director, "Director"),
+        _textField(synopsis, "Synopsis"),
+        const SizedBox(height: 20),
+        ElevatedButton(
+          onPressed: () => _updateFilm(context),
+          child: const Text("Update Film"),
+        ),
+      ],
+    );
+  }
+
+  Widget _textField(TextEditingController controller, String label) {
+    return TextField(
+      controller: controller,
+      decoration: InputDecoration(labelText: label),
+    );
+  }
+
+  Future<void> _updateFilm(BuildContext context) async {
+    try {
+      int? yearInt = int.tryParse(year.text.trim());
+      double? ratingDouble = double.tryParse(rating.text.trim());
+
+      if (yearInt == null || ratingDouble == null) {
+        throw Exception("Tahun dan rating harus berupa angka.");
+      }
+
+      FilmData updatedFilm = FilmData(
+        id: widget.id,
+        title: title.text.trim(),
+        year: yearInt,
+        rating: ratingDouble,
+        genre: genre.text.trim(),
+        director: director.text.trim(),
+        synopsis: synopsis.text.trim(),
+      );
+
+      await ApiService.updateFilm(updatedFilm);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Film '${updatedFilm.title}' berhasil diperbarui")),
+      );
+
+      Navigator.pop(context);
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const HomePage(username: 'admin',)),
+      );
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Gagal: $error")),
+      );
+    }
   }
 }

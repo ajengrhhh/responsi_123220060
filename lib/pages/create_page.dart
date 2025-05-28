@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/movie_model.dart';
-import '../services/movie_service.dart';
+import 'package:responsi/models/movie_model.dart';
+import 'package:responsi/services/movie_service.dart';
 
 class CreatePage extends StatefulWidget {
   const CreatePage({super.key});
@@ -17,53 +17,90 @@ class _CreatePageState extends State<CreatePage> {
   final _directorController = TextEditingController();
   final _ratingController = TextEditingController();
   final _synopsisController = TextEditingController();
-  final _imageUrlController = TextEditingController();
+
+  bool _isLoading = false;
 
   void _submit() async {
     if (_formKey.currentState!.validate()) {
-      final newMovie = Movie(
-        id: 0, // API will auto-assign ID
+      setState(() => _isLoading = true);
+
+      final filmdata = FilmData(
         title: _titleController.text,
-        year: _yearController.text,
+        year: int.tryParse(_yearController.text),
         genre: _genreController.text,
         director: _directorController.text,
-        rating: double.parse(_ratingController.text),
+        rating: double.tryParse(_ratingController.text),
         synopsis: _synopsisController.text,
-        image: _imageUrlController.text,
+        imgUrl: "", // default kosong
+        movieUrl: "", // default kosong
       );
-      final success = await ApiService.addMovie(newMovie);
-      if (success) {
-        Navigator.pop(context);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to add movie')),
-        );
+
+      try {
+        await ApiService.post(filmdata);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Film berhasil ditambahkan')));
+        Navigator.pop(context); // Kembali ke HomePage
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      } finally {
+        setState(() => _isLoading = false);
       }
     }
   }
 
   @override
+  void dispose() {
+    _titleController.dispose();
+    _yearController.dispose();
+    _genreController.dispose();
+    _directorController.dispose();
+    _ratingController.dispose();
+    _synopsisController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Add Movie')),
+      appBar: AppBar(title: const Text('Tambah Film')),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(20),
         child: Form(
           key: _formKey,
           child: ListView(
             children: [
-              TextFormField(controller: _titleController, decoration: const InputDecoration(labelText: 'Title')),
-              TextFormField(controller: _yearController, decoration: const InputDecoration(labelText: 'Year')),
-              TextFormField(controller: _genreController, decoration: const InputDecoration(labelText: 'Genre')),
-              TextFormField(controller: _directorController, decoration: const InputDecoration(labelText: 'Director')),
-              TextFormField(controller: _ratingController, decoration: const InputDecoration(labelText: 'Rating')),
-              TextFormField(controller: _synopsisController, decoration: const InputDecoration(labelText: 'Synopsis')),
-              TextFormField(controller: _imageUrlController, decoration: const InputDecoration(labelText: 'Image URL')),
+              _buildTextField(_titleController, "Judul"),
+              _buildTextField(_yearController, "Tahun", keyboardType: TextInputType.number),
+              _buildTextField(_genreController, "Genre"),
+              _buildTextField(_directorController, "Direktur"),
+              _buildTextField(_ratingController, "Rating", keyboardType: TextInputType.number),
+              _buildTextField(_synopsisController, "Sinopsis", maxLines: 3),
               const SizedBox(height: 20),
-              ElevatedButton(onPressed: _submit, child: const Text('Add Movie'))
+              _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : ElevatedButton(
+                      onPressed: _submit,
+                      child: const Text('Simpan'),
+                    ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildTextField(TextEditingController controller, String label,
+      {TextInputType keyboardType = TextInputType.text, int maxLines = 1}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: TextFormField(
+        controller: controller,
+        keyboardType: keyboardType,
+        maxLines: maxLines,
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(),
+        ),
+        validator: (value) => value == null || value.isEmpty ? 'Wajib diisi' : null,
       ),
     );
   }
