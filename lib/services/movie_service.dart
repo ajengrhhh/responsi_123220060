@@ -3,7 +3,8 @@ import 'package:http/http.dart' as http;
 import '../models/movie_model.dart';
 
 class ApiService {
-  static const String baseUrl = 'https://tpm-api-responsi-a-h-872136705893.us-central1.run.app/api/v1/movies';
+  static const String baseUrl =
+      'https://tpm-api-responsi-a-h-872136705893.us-central1.run.app/api/v1/movies';
 
   static Future<List<FilmData>> getFilms() async {
     final response = await http.get(Uri.parse(baseUrl));
@@ -30,13 +31,13 @@ class ApiService {
     }
   }
 
-  static Future<Map<String,dynamic>> post(FilmData filmdata) async {
+  static Future<Map<String, dynamic>> post(FilmData filmdata) async {
     final response = await http.post(
       Uri.parse(baseUrl),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(filmdata.toJson()),
     );
-        return jsonDecode(response.body);
+    return jsonDecode(response.body);
   }
 
   static Future<Map<String, dynamic>> updateFilm(FilmData updateFilm) async {
@@ -45,16 +46,12 @@ class ApiService {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(updateFilm.toJson()), // <- fix di sini
     );
-      return jsonDecode(response.body);
+    return jsonDecode(response.body);
   }
 
   static Future<bool> deleteMovie(int id) async {
-    final response = await http.delete(
-      Uri.parse('$baseUrl/movies/$id'),
-    );
+    final response = await http.delete(Uri.parse('$baseUrl/$id'));
 
     return response.statusCode == 200;
   }
-
-
 }

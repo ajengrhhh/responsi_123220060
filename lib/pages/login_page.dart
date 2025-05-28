@@ -18,7 +18,7 @@ class _LoginPageState extends State<LoginPage> {
     final password = passwordController.text;
 
     if (_formKey.currentState!.validate()) {
-      if (username == 'admin' && password == 'admin123') {
+      if (username == '123220060' && password == '12345678') {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => HomePage(username: username)),

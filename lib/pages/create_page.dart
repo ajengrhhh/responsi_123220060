@@ -38,7 +38,7 @@ class _CreatePageState extends State<CreatePage> {
       try {
         await ApiService.post(filmdata);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Film berhasil ditambahkan')));
-        Navigator.pop(context); // Kembali ke HomePage
+        Navigator.pop(context, true); // Kembali ke HomePage
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
       } finally {
